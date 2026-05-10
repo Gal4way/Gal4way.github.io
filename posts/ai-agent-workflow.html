@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我如何用 AI Agent 搭建了一套覆盖研发全链路的个人工作流 - Xu Yang</title>
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <link rel="stylesheet" href="../assets/css/post.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="../index.html" class="nav-logo">Xu Yang</a>
+      <ul class="nav-links">
+        <li><a href="../index.html#about">About</a></li>
+        <li><a href="../index.html#publications">Publications</a></li>
+        <li><a href="../index.html#experience">Experience</a></li>
+        <li><a href="../blog.html">Blog</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <article class="post-container">
+    <header class="post-header">
+      <h1>我如何用 AI Agent 搭建了一套覆盖研发全链路的个人工作流</h1>
+      <p class="post-meta">2025-05-11 · Xu Yang · <span class="post-tag">AI Agent</span> <span class="post-tag">Workflow</span> <span class="post-tag">Productivity</span></p>
+    </header>
+
+    <div class="post-content">
+      <h2>系统全景</h2>
+      <pre><code>┌────────────────────────────────────────────────────────────────┐
+│                        AI Agent 工作流                           │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  📡 热点推送        定时任务 → 全网检索 → 飞书文档（每日自动）    │
+│  📖 论文审稿        PDF解析 → Review + Analysis + Read（三文档） │
+│  💻 代码开发        方案对齐 → 编码 → 强制自检 → commit          │
+│  🖥️ GPU 实验调度   一键起机 → 自动运行 → 日志追踪               │
+│  📋 实验文档管理    自动登记表格 → 创建文档 → 上传结果视频        │
+│  📝 工作记录        每日自动总结 → 飞书文档 → 周报自动生成        │
+│  🧠 跨会话记忆      Progress Log + Memory → 断点续做             │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘</code></pre>
+      <p>下面按场景逐一展开。</p>
+
+<!-- PLACEHOLDER_REST -->
+      <h2>一、热点推送：每日自动情报收集</h2>
+      <p>通过定时任务（Cron Job）实现，每天早晨自动触发，无需人工干预。</p>
+      <pre><code>[每日定时触发]
+    │
+    ▼
+[全网检索过去 24h 热点]
+    │  覆盖：AI前沿/开源生态、科技大厂动态、财经宏观、全球大事
+    │  筛选：过滤营销稿，每类别最多 3 条，总量 8-12 条
+    │
+    ▼
+[整理为高信息密度 Markdown]
+    │  每条包含：加粗关键词标题、关键数据点、影响洞察、信息来源
+    │
+    ▼
+[创建飞书文档] → 标题：YYYY_MM_DD_每日推送_热点</code></pre>
+      <p>同时还有一个<strong>学术推送</strong>定时任务，专门抓取 AR Video Generation 领域的最新论文，筛选 3-5 篇高价值工作。</p>
+      <p><strong>效果</strong>：每天早上打开飞书就能看到两份精选推送，不再需要手动刷 Twitter/ArXiv/新闻站。</p>
+
+      <h2>二、论文阅读：三文档深度解读</h2>
+      <p>封装为本地 Skill，输入一个 ArXiv 链接，自动产出三份飞书文档：</p>
+      <ul>
+        <li><strong>Review</strong>（英文）：模拟顶会审稿人视角，含 Strengths/Weaknesses/Rating</li>
+        <li><strong>Analysis</strong>（中文）：技术深度分析，含评分理由和快速决策参考表</li>
+        <li><strong>Read</strong>（中文）：Q&A 形式论文解读，8 个核心问题逐一拆解</li>
+      </ul>
+      <h3>Read 文档核心问题</h3>
+      <table>
+        <tr><th>#</th><th>问题</th><th>目的</th></tr>
+        <tr><td>Q1</td><td>解决什么任务？</td><td>快速定位论文 scope</td></tr>
+        <tr><td>Q2</td><td>Technical challenge 有哪些？</td><td>理解问题难点</td></tr>
+        <tr><td>Q3</td><td>主要贡献点？</td><td>判断创新度</td></tr>
+        <tr><td>Q4</td><td>方法包含哪些模块？</td><td>技术细节拆解</td></tr>
+        <tr><td>Q5</td><td>模块如何解决 challenge？</td><td>建立映射</td></tr>
+        <tr><td>Q6</td><td>实验如何设计？</td><td>评估严谨性</td></tr>
+        <tr><td>Q7</td><td>Limitation？</td><td>识别风险</td></tr>
+        <tr><td>Q8</td><td>Future work？</td><td>启发后续研究</td></tr>
+      </table>
+
+      <h2>三、代码开发：方案对齐 → 编码 → 强制自检</h2>
+      <p>通过 CLAUDE.md（全局指令文件）+ PreToolUse Hooks 实现规范化开发流程。</p>
+      <pre><code>[需求/想法]
+    ▼
+[/tech-doc 创建技术方案文档]  ← 飞书文档，含背景/方案/风险/ToDo
+    ▼
+[方案对齐确认]  ← 用户审阅文档，确认方向
+    ▼
+[编码实现]
+    ├── 自动确认当前分支（必须在 yx/ 前缀分支上）
+    ├── 最小改动原则，保持现有代码风格
+    └── 新增代码必须有注释说明意图
+    ▼
+[强制自检]
+    1. 逻辑正确性（条件分支、边界、off-by-one）
+    2. 一致性（接口签名、参数透传链路）
+    3. 副作用（是否影响未修改的功能路径）
+    4. 遗漏（白名单、config、类型定义是否同步）
+    ▼
+[自我 Review]  ← 问自己：为什么这样做？为什么不那样做？
+    （对保持技术 taste 和敏锐非常重要）
+    ▼
+[commit]  ← 格式：&lt;type&gt;: &lt;description&gt;</code></pre>
+      <h3>安全保障（三层防护）</h3>
+      <table>
+        <tr><th>层级</th><th>机制</th><th>作用</th></tr>
+        <tr><td>L1 Deny List</td><td>settings.json 硬拦截</td><td>禁止 git push/rm -rf/sudo 等</td></tr>
+        <tr><td>L2 Bash Hook</td><td>运行时命令检查</td><td>共享存储只读、merge 分支约束</td></tr>
+        <tr><td>L3 Write Hook</td><td>文件级写保护</td><td>非 yx/ 分支禁止修改 git 跟踪文件</td></tr>
+      </table>
+
+      <h2>四、GPU 实验调度：一键起机 → 自动运行</h2>
+      <p>封装为 4 个 Slash Command Skill（/worker、/worker-status、/worker-login、/worker-run）。</p>
+      <pre><code>[/worker 8]  ← 一键启动 8 卡 H100 worker
+    ▼
+[/worker-run train.sh]  ← 在 worker 上运行脚本
+    │  自动生成 wrapper 脚本：
+    │    1. 停止 GPU 占位进程
+    │    2. cd 到仓库目录
+    │    3. bash script.sh 2>&1 | tee 日志文件
+    │    4. 恢复 GPU 占位进程
+    ▼
+[日志追踪]  ← /log/&lt;仓库名&gt;/MMDD_HHmm_脚本名.log
+    ▼
+[实验完成] → 触发实验文档管理流程</code></pre>
+
+      <h2>五、实验文档管理：自动登记 → 创建文档 → 上传结果</h2>
+      <p>封装为 /experiment-record Skill，与飞书表格和文档深度集成。表格按 task 分组，千位前缀编号（0xxx=任务A、1xxx=任务B...），同组 ablation 实验紧邻排列。</p>
+      <pre><code>[/experiment-record register]
+    ├── 从推理脚本提取：OUTPUT_DIR、CKPT_PATH、关键超参
+    ├── 从训练平台获取：机器配置、运行日期、状态
+    ▼
+[写入飞书表格] → [自动创建飞书文档] → [文档链接回填表格]
+    ▼
+[/experiment-record upload 1001]
+    │  从 OUTPUT_DIR 找到 *.mp4，每个 setting 随机选 2 个视频
+    │  上传到飞书文档对应章节
+    ▼
+[用户分析结论] → AI 填入表格和文档结论章节</code></pre>
+
+      <h2>六、工作记录：每日自动 → 周报自动</h2>
+      <p>封装为 /work-log 和 /record Skill。完成一个子任务后 AI 主动提醒记录，自动从对话上下文提取时间、任务简述、内容、产出，追加写入当天飞书文档。</p>
+      <p>周报通过 <code>/record weekly</code> 自动汇总本周所有 progress 文件、实验表格、每日记录，生成结构化周报。</p>
+
+      <h2>七、跨会话记忆：断点续做</h2>
+      <p>AI Agent 的对话是无状态的——关闭窗口后，下次对话它什么都不记得。解决方案是<strong>双层持久化</strong>：</p>
+      <table>
+        <tr><th>层级</th><th>存储</th><th>内容</th><th>生命周期</th></tr>
+        <tr><td>Memory</td><td>~/.claude/memory/</td><td>用户偏好、行为反馈、项目知识</td><td>长期稳定</td></tr>
+        <tr><td>Progress</td><td>~/.claude/progress/</td><td>操作日志、当前状态、下一步</td><td>任务周期</td></tr>
+      </table>
+      <p>新对话只需说"继续做 XX"，AI 自动读取 progress → 关联飞书文档 → 查询 trial 状态 → 从"下一步"继续工作，零冷启动。</p>
+
+      <h2>完整工作流串联示例</h2>
+      <pre><code>Day 1:
+  /tech-doc "context压缩efficiency验证"
+    → 创建飞书技术方案文档
+    → 用户确认方案
+
+  编码实现 efficiency 插桩
+    → 强制自检 → 自我 Review（为什么这样？为什么不那样？）
+    → commit → /progress update
+
+  /worker 8 → 启动 GPU worker
+  /worker-run efficiency_baseline.sh → 提交实验
+  /experiment-record register → 登记到飞书表格
+  /work-log → 记录今日工作
+
+Day 2:
+  "继续做 efficiency 验证"
+    → 跨会话接力，读取 progress + 查询 trial 状态
+  /experiment-record upload 1001 → 上传结果视频
+  分析结论 → 填入表格和文档
+  /work-log → 记录今日工作
+
+Friday:
+  /record weekly → 自动汇总周报</code></pre>
+    </div>
+  </article>
+
+  <footer class="footer">
+    <p>&copy; 2026 Xu Yang. Powered by GitHub Pages.</p>
+  </footer>
+</body>
+</html>
