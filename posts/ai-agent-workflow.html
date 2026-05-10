@@ -29,19 +29,13 @@
 
     <div class="post-content">
       <h2>系统全景</h2>
-      <pre><code>┌────────────────────────────────────────────────────────────────┐
-│                        AI Agent 工作流                           │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  📡 热点推送        定时任务 → 全网检索 → 飞书文档（每日自动）    │
-│  📖 论文审稿        PDF解析 → Review + Analysis + Read（三文档） │
-│  💻 代码开发        方案对齐 → 编码 → 强制自检 → commit          │
-│  🖥️ GPU 实验调度   一键起机 → 自动运行 → 日志追踪               │
-│  📋 实验文档管理    自动登记表格 → 创建文档 → 上传结果视频        │
-│  📝 工作记录        每日自动总结 → 飞书文档 → 周报自动生成        │
-│  🧠 跨会话记忆      Progress Log + Memory → 断点续做             │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘</code></pre>
+      <pre><code>📡 热点推送        定时任务 → 全网检索 → 飞书文档（每日自动）
+📖 论文审稿        PDF解析 → Review + Analysis + Read（三文档）
+💻 代码开发        方案对齐 → 编码 → 强制自检 → commit
+🖥️ GPU 实验调度   一键起机 → 自动运行 → 日志追踪
+📋 实验文档管理    自动登记表格 → 创建文档 → 上传结果视频
+📝 工作记录        每日自动总结 → 飞书文档 → 周报自动生成
+🧠 跨会话记忆      Progress Log + Memory → 断点续做</code></pre>
       <p>下面按场景逐一展开。</p>
 
 <!-- PLACEHOLDER_REST -->
@@ -131,30 +125,107 @@
 
       <h2>五、实验文档管理：自动登记 → 创建文档 → 上传结果</h2>
       <p>封装为 /experiment-record Skill，与飞书表格和文档深度集成。表格按 task 分组，千位前缀编号（0xxx=任务A、1xxx=任务B...），同组 ablation 实验紧邻排列。</p>
+      <h3>实验表格结构</h3>
+      <table>
+        <tr><th>日期</th><th>状态</th><th>机器</th><th>是否分析</th><th>实验名称</th><th>Setting 说明</th><th>分析</th><th>文档链接</th></tr>
+        <tr><td>5/9</td><td>完成</td><td>8×H100</td><td>是</td><td>1001_baseline</td><td>recent=100, oldest=19</td><td>基准性能</td><td>[链接]</td></tr>
+        <tr><td>5/9</td><td>完成</td><td>8×H100</td><td>待做</td><td>1002_recent3</td><td>recent=3, oldest=19</td><td></td><td>[链接]</td></tr>
+      </table>
+      <h3>工作流</h3>
       <pre><code>[/experiment-record register]
     ├── 从推理脚本提取：OUTPUT_DIR、CKPT_PATH、关键超参
     ├── 从训练平台获取：机器配置、运行日期、状态
     ▼
-[写入飞书表格] → [自动创建飞书文档] → [文档链接回填表格]
+[写入飞书表格]  ← 自动填充日期/状态/机器/实验名/setting
+    ▼
+[自动创建飞书文档]  ← 按模板：setting + 结果 + 结论
+    ▼
+[文档链接回填表格]
     ▼
 [/experiment-record upload 1001]
     │  从 OUTPUT_DIR 找到 *.mp4，每个 setting 随机选 2 个视频
     │  上传到飞书文档对应章节
     ▼
 [用户分析结论] → AI 填入表格和文档结论章节</code></pre>
+      <h3>实验文档模板</h3>
+      <pre><code>### Setting
+- 目的：验证 context 压缩对推理效率的影响
+- 关键参数：VIDEO_CTX_KEEP_LATENTS=3, COMPRESS_RATIO=4
+- CKPT: hdfs://path/to/checkpoint
+
+### 结果
+[视频1] [视频2]  ← 自动上传，同组并排展示
+
+### 结论
+（由用户口述，AI 格式化填入）</code></pre>
 
       <h2>六、工作记录：每日自动 → 周报自动</h2>
-      <p>封装为 /work-log 和 /record Skill。完成一个子任务后 AI 主动提醒记录，自动从对话上下文提取时间、任务简述、内容、产出，追加写入当天飞书文档。</p>
-      <p>周报通过 <code>/record weekly</code> 自动汇总本周所有 progress 文件、实验表格、每日记录，生成结构化周报。</p>
+      <p>封装为 /work-log 和 /record Skill，与飞书文档集成。</p>
+      <h3>每日工作记录</h3>
+      <pre><code>[完成一个子任务后，AI 主动提醒]
+    │  "要记录到工作日志吗？"
+    ▼
+[AI 自动从对话上下文提取]
+    │  时间、任务简述、内容、产出（commit/文档链接/实验编号）
+    ▼
+[展示给用户确认]
+    ▼
+[追加写入当天飞书文档]</code></pre>
+      <p>飞书文档按周分文件夹，每天一个文档：</p>
+      <pre><code>工作日志/
+├── 26_5_5-26_5_11/     ← 按周分文件夹
+│   ├── 26_5_5          ← 每天一个文档
+│   ├── 26_5_6
+│   └── ...
+└── 26_5_12-26_5_18/</code></pre>
+      <p>每条记录格式：</p>
+      <pre><code>## [14:32] cherry-pick 压缩模块到 master
+
+- **任务**: [rebase回master](飞书链接)
+- **内容**: 完成压缩模块的 cherry pick，验证结果正常
+- **产出**: commit `abc1234` on branch yx/rebase_to_master</code></pre>
+      <h3>周报自动生成</h3>
+      <p>通过 <code>/record weekly</code> 自动汇总本周所有 progress 文件、实验表格、每日记录，生成结构化周报（本周完成的工作 + 实验进展和结论 + 下周计划），用户确认后写入飞书。</p>
 
       <h2>七、跨会话记忆：断点续做</h2>
-      <p>AI Agent 的对话是无状态的——关闭窗口后，下次对话它什么都不记得。解决方案是<strong>双层持久化</strong>：</p>
+      <p>AI Agent 的对话是无状态的——关闭窗口后，下次对话它什么都不记得。但研发任务往往跨越多天。解决方案是<strong>双层持久化</strong>：</p>
       <table>
         <tr><th>层级</th><th>存储</th><th>内容</th><th>生命周期</th></tr>
-        <tr><td>Memory</td><td>~/.claude/memory/</td><td>用户偏好、行为反馈、项目知识</td><td>长期稳定</td></tr>
-        <tr><td>Progress</td><td>~/.claude/progress/</td><td>操作日志、当前状态、下一步</td><td>任务周期</td></tr>
+        <tr><td>Memory</td><td>~/.claude/memory/</td><td>用户偏好、行为反馈、项目知识、易犯错误</td><td>长期稳定</td></tr>
+        <tr><td>Progress</td><td>~/.claude/progress/</td><td>操作日志、当前状态、下一步、关联文档链接</td><td>任务周期</td></tr>
       </table>
-      <p>新对话只需说"继续做 XX"，AI 自动读取 progress → 关联飞书文档 → 查询 trial 状态 → 从"下一步"继续工作，零冷启动。</p>
+      <h3>Progress Log 示例</h3>
+      <pre><code># Efficiency 验证
+
+- 状态：活跃
+- 分支：yx/ar_train_tf_history_compress
+- 关联文档：
+  - tech-doc: https://feishu.cn/docx/xxx
+  - 实验表格行: 1001-1004
+  - merlin trial: https://ml.xxx.net/jobs/62e1034310977b2a
+
+## 操作记录
+### 2026-05-09
+#### 做了什么
+- 在 pipeline 中完成 efficiency 插桩
+- 创建 4 个测试脚本，提交 4 个 trial
+
+#### 当前状态
+- 4 个 trial 运行中，等待完成
+
+#### 下一步
+- 收集 efficiency.json，汇总对比表格</code></pre>
+      <h3>跨会话接力流程</h3>
+      <pre><code>[用户："继续做 efficiency 验证"]
+    ▼
+[AI 在 progress/ 下找到匹配文件]
+    ▼
+[读取关联的飞书技术文档] → 获取方案上下文
+    ▼
+[查询训练平台 trial 状态] → 获取最新运行状态
+    ▼
+[从"下一步"继续工作]  ← 零冷启动</code></pre>
+      <p><strong>效果</strong>：新对话不再需要花 5-10 分钟解释背景，说一句"继续"就能无缝接续。</p>
 
       <h2>完整工作流串联示例</h2>
       <pre><code>Day 1:
