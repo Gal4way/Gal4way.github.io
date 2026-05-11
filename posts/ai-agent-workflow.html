@@ -24,7 +24,7 @@
   <article class="post-container">
     <header class="post-header">
       <h1>我如何用 AI Agent 搭建了一套覆盖研发全链路的个人工作流</h1>
-      <p class="post-meta">2025-05-11 · Xu Yang · <span class="post-tag">AI Agent</span> <span class="post-tag">Workflow</span> <span class="post-tag">Productivity</span></p>
+      <p class="post-meta">2026-05-11 · Xu Yang · <span class="post-tag">AI Agent</span> <span class="post-tag">Workflow</span> <span class="post-tag">Productivity</span></p>
     </header>
 
     <div class="post-content">
@@ -80,6 +80,54 @@
         <tr><td>Q7</td><td>Limitation？</td><td>识别风险</td></tr>
         <tr><td>Q8</td><td>Future work？</td><td>启发后续研究</td></tr>
       </table>
+
+      <h2>技术方案文档：从想法到可执行计划</h2>
+      <p>封装为 /tech-doc Skill，将技术方案结构化沉淀为飞书文档，作为代码开发的前置对齐环节。</p>
+      <h3>为什么需要这一步</h3>
+      <p>代码开发前最常见的问题是：方向没对齐就动手，改到一半发现思路有误。/tech-doc 强制在编码前完成方案设计，确保 AI 和用户对"做什么、怎么做、有什么风险"达成共识。</p>
+      <h3>工作流</h3>
+      <pre><code>[用户描述需求/想法]
+    ▼
+[AI 自动收集信息]
+    ├── git log / git diff：提取相关 commit 和改动
+    ├── 阅读代码：理解现有实现和架构
+    └── 用户口述：补充设计意图和约束
+    ▼
+[按固定框架生成文档]
+    ▼
+[创建飞书文档] → 存入指定文件夹
+    ▼
+[用户审阅确认] → 进入代码开发阶段</code></pre>
+      <h3>文档固定框架</h3>
+      <p>每篇技术方案文档必须包含以下章节：</p>
+      <pre><code>## 背景/目的
+为什么要做这件事，解决什么问题
+
+## 方案
+具体怎么做，技术方案和关键实现
+（含子章节、表格、代码片段，视场景而定）
+
+## 风险/注意事项
+潜在风险、已知限制、需要注意的坑
+
+## 进展
+当前状态和已完成的工作
+
+## ToDo
+- [ ] 待办事项清单</code></pre>
+      <h3>支持的操作模式</h3>
+      <table>
+        <tr><th>命令</th><th>作用</th></tr>
+        <tr><td><code>/tech-doc &lt;主题&gt;</code></td><td>新建文档，AI 收集信息后按框架生成</td></tr>
+        <tr><td><code>/tech-doc update &lt;文档&gt; &lt;章节&gt;</code></td><td>更新已有文档的指定章节</td></tr>
+        <tr><td><code>/tech-doc &lt;文档URL&gt; &lt;主题&gt;</code></td><td>写入指定已有文档</td></tr>
+      </table>
+      <h3>与其他环节的衔接</h3>
+      <pre><code>/tech-doc 产出方案文档
+    ├──→ 代码开发阶段：AI 按方案实现，遇到偏差回查文档
+    ├──→ /progress：关联 tech-doc 链接，跨会话时可回溯方案上下文
+    └──→ /record weekly：周报中引用方案文档作为"本周设计工作"的证据</code></pre>
+      <p><strong>核心价值</strong>：技术方案不再只存在于脑子里或聊天记录中，而是沉淀为可追溯、可引用、可更新的结构化文档。</p>
 
       <h2>三、代码开发：方案对齐 → 编码 → 强制自检</h2>
       <p>通过 CLAUDE.md（全局指令文件）+ PreToolUse Hooks 实现规范化开发流程。</p>
